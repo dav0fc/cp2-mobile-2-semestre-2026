@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "744959975116",
+    "firebase_url": "https://chandasala-d87f9-default-rtdb.firebaseio.com",
+    "project_id": "chandasala-d87f9",
+    "storage_bucket": "chandasala-d87f9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:744959975116:android:1b882a13cc6c0c0b0eac69",
+        "android_client_info": {
+          "package_name": "com.frutigachat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "744959975116-te3qn9cpoim9lupk5cvc9p8hk18opu3h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyACbm-4xyQFw9e5T9xhQE4akQ6y_yUQ6oM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "744959975116-te3qn9cpoim9lupk5cvc9p8hk18opu3h.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

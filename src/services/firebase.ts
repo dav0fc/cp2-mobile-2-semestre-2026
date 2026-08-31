@@ -1,6 +1,6 @@
-import { initializeApp } from 'firebase/app';
-import { getDatabase } from 'firebase/database';
-import { getAuth } from 'firebase/auth';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { getDatabase, Database } from 'firebase/database';
+import { getAuth, Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 
 const config = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -12,13 +12,8 @@ const config = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-if (!config.apiKey || !config.projectId) {
-  throw new Error(
-    '🔒 Firebase credentials missing. Configure EXPO_PUBLIC_FIREBASE_* variables in .env'
-  );
-}
+const app: FirebaseApp = getApps().length ? getApp() : initializeApp(config);
 
-const app = initializeApp(config);
-
-export const db = getDatabase(app);
-export const auth = getAuth(app);
+export const db: Database = getDatabase(app);
+export const auth: Auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(() => {});
