@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "FrutigerChat",
+    "slug": "frutigachat",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "backgroundColor": "#FFFFFF",
+    "userInterfaceStyle": "light",
+    "plugins": [
+      "@react-native-google-signin/google-signin",
+      "expo-apple-authentication"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.frutigachat"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF"
+      },
+      "package": "com.frutigachat"
+    },
+    "web": {
+      "backgroundColor": "#FFFFFF"
+    }
+  }
+}
