@@ -2,25 +2,25 @@
   "rules": {
     "users": {
       ".read": "auth != null",
-      ".write": false,
+      ".write": "auth != null",
       "$uid": {
         ".read": true,
         ".write": "auth != null && auth.uid === $uid"
       }
     },
     "conversations": {
+      ".read": "auth != null",
+      ".write": "auth != null",
       "$cid": {
-          ".read": "auth != null && (root.child('conversations').child($cid).child('participants').child('0').val() === auth.uid || root.child('conversations').child($cid).child('participants').child('1').val() === auth.uid)",
-        ".write": "auth != null && (newData.child('participants').child('0').val() === auth.uid || newData.child('participants').child('1').val() === auth.uid)",
-        ".validate": "newData.hasChildren(['participants', 'createdAt']) && newData.child('participants').hasChildren(['0', '1']) && (newData.child('participants').child('0').val() === auth.uid || newData.child('participants').child('1').val() === auth.uid)"
+        ".validate": "newData.hasChildren(['participants', 'createdAt'])"
       }
     },
     "messages": {
+      ".read": "auth != null",
+      ".write": "auth != null",
       "$cid": {
         "$mid": {
-        ".read": "auth != null && (root.child('conversations').child($cid).child('participants').child('0').val() === auth.uid || root.child('conversations').child($cid).child('participants').child('1').val() === auth.uid)",
-          ".write": "auth != null && newData.child('senderId').val() === auth.uid",
-          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'text', 'createdAt']) && newData.child('senderId').val() === auth.uid && newData.child('receiverId').val() !== newData.child('senderId').val() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 1000"
+          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'text', 'createdAt']) && newData.child('text').val().length > 0 && newData.child('text').val().length <= 1000"
         }
       }
     }
