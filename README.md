@@ -6,7 +6,7 @@ Aplicativo de chat 1 para 1 em React Native com TypeScript, utilizando Firebase 
 
 ## Tecnologias Utilizadas
 
-- **React Native** 0.76
+- **React Native** 0.81.5
 - **Expo SDK** 54
 - **TypeScript** 5.6
 - **Firebase Authentication** (Email/Senha, Google, Apple)
@@ -22,74 +22,21 @@ Aplicativo de chat 1 para 1 em React Native com TypeScript, utilizando Firebase 
 
 ## Instruções para Execução
 
-### Pré-requisitos
-
-1. Node.js 18+ instalado
-2. Expo CLI instalado globalmente (`npm install -g expo`)
-3. Conta Firebase com Authentication e Realtime Database habilitados
-
-### Instalação
-
 ```bash
-# Instalar dependências
 npm install
-
-# Iniciar o aplicativo
 npx expo start
 ```
 
-### Configuração do Firebase
+## Configuração do Firebase
 
-1. Crie um projeto no [Firebase Console](https://console.firebase.google.com)
-2. Habilite **Authentication** com os provedores:
-   - Email/Senha
-   - Google (configure o OAuth consent screen)
-   - Apple (configure com ID de aplicativo)
-3. Habilite o **Realtime Database**
-4. Crie um arquivo `.env` na raiz do projeto com as credenciais:
+1. Crie um projeto no Firebase Console
+2. Habilite Authentication com os provedores: Email/Senha, Google e Apple
+3. Habilite o Realtime Database
+4. Crie um arquivo `.env` na raiz do projeto com suas credenciais
 
-```env
-EXPO_PUBLIC_FIREBASE_API_KEY=your_api_key
-EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-EXPO_PUBLIC_FIREBASE_DATABASE_URL=https://your_project.firebaseio.com
-EXPO_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-EXPO_PUBLIC_FIREBASE_APP_ID=your_app_id
-```
+## Regras de Segurança
 
-### Configuração de Regras de Segurança
-
-No Firebase Realtime Database, configure as regras:
-
-```json
-{
-  "rules": {
-    "users": {
-      "$uid": {
-        ".read": "auth != null",
-        ".write": "auth != null && auth.uid === $uid"
-      }
-    },
-    "conversations": {
-      "$cid": {
-        ".read": "auth != null && (root.child('conversations').child($cid).child('participants').child('0').val() === request.auth.uid || root.child('conversations').child($cid).child('participants').child('1').val() === request.auth.uid)",
-        ".write": "auth != null && (newData.child('participants').child('0').val() === auth.uid || newData.child('participants').child('1').val() === auth.uid)",
-        ".validate": "newData.hasChildren(['participants', 'createdAt']) && newData.child('participants').hasChildren(['0', '1']) && (newData.child('participants').child('0').val() === auth.uid || newData.child('participants').child('1').val() === auth.uid)"
-      }
-    },
-    "messages": {
-      "$cid": {
-        "$mid": {
-          ".read": "auth != null && (root.child('conversations').child($cid).child('participants').child('0').val() === request.auth.uid || root.child('conversations').child($cid).child('participants').child('1').val() === request.auth.uid)",
-          ".write": "auth != null && newData.child('senderId').val() === auth.uid",
-          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'text', 'createdAt']) && newData.child('senderId').val() === auth.uid && newData.child('receiverId').val() !== newData.child('senderId').val() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 1000"
-        }
-      }
-    }
-  }
-}
-```
+As regras de segurança estão em `database.rules.json`. Apenas usuários autenticados e participantes da conversa têm acesso aos dados.
 
 ## Estrutura do Projeto
 
@@ -104,8 +51,9 @@ src/
   contexts/           # React Contexts
     AuthContext.tsx    # Contexto de autenticação
   hooks/              # Custom hooks
-    useAuth.ts         # Hook de autenticação
     useChat.ts         # Hook de chat
+  navigation/
+    AppRouter.tsx      # Roteamento da aplicação
   screens/            # Telas
     LoginScreen.tsx    # Tela de login/registro
     UsersScreen.tsx    # Lista de contatos
@@ -122,10 +70,6 @@ src/
     chatRules.ts       # Regras de compatibilidade
 App.tsx               # Componente principal
 ```
-
-## Capturas de Tela
-
-*(Adicione prints da aplicação aqui)*
 
 ## Funcionalidades
 

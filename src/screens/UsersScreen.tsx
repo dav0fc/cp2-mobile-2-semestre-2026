@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import UserItem from '../components/UserItem';
 import Loading from '../components/Loading';
 import ErrorMessage from '../components/ErrorMessage';

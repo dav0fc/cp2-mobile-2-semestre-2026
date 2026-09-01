@@ -1,27 +1,5 @@
 import { AuthProvider } from '../types/user';
 
-export type CompatibleProviders = 'password' | 'google' | 'apple';
-
-export function areProvidersCompatible(
-  providerA: AuthProvider,
-  providerB: AuthProvider
-): boolean {
-  if (providerA === providerB) {
-    return false;
-  }
-
-  if (providerA === 'password' && providerB === 'password') {
-    return false;
-  }
-
-  if ((providerA === 'google' && providerB === 'apple') ||
-      (providerA === 'apple' && providerB === 'google')) {
-    return false;
-  }
-
-  return true;
-}
-
 export function isProviderCompatibleWith(
   myProvider: AuthProvider,
   otherProvider: AuthProvider

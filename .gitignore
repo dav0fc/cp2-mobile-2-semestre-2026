@@ -3,4 +3,5 @@ node_modules
 dist
 tsconfig.tsbuildinfo
 .env
+.env.local
 README_TRABALHO_REACT_NATIVE_CHAT_FIREBASE.md

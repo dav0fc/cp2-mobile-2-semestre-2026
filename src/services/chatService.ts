@@ -1,23 +1,8 @@
-import { ref, set, push, onValue, off, remove } from 'firebase/database';
+import { ref, set, push, onValue, off } from 'firebase/database';
 import { ChatMessage, Conversation } from '../types/chat';
 import { db } from './firebase';
 
 export type MessagesListenerCallback = (messages: ChatMessage[]) => void;
-export type ConversationListenerCallback = (conversations: Conversation[]) => void;
-
-export function createConversation(
-  participant1: string,
-  participant2: string
-): Promise<void> {
-  const id = `${participant1}_${participant2}`;
-  const conversationPath = ref(db, `conversations/${id}`);
-  const conversationData: Conversation = {
-    id,
-    participants: [participant1, participant2],
-    createdAt: Date.now(),
-  };
-  return set(conversationPath, conversationData);
-}
 
 export function findOrCreateConversation(
   participant1: string,
@@ -103,31 +88,4 @@ export function listenToMessages(
   );
 
   return () => off(messagesRef);
-}
-
-export function listenToConversations(
-  userId: string,
-  callback: ConversationListenerCallback
-): () => void {
-  const conversationsRef = ref(db, 'conversations');
-  const unsubscribe = onValue(
-    conversationsRef,
-    (snapshot) => {
-      const data = snapshot.val();
-      if (data && typeof data === 'object') {
-        const conversations: Conversation[] = Object.values(data)
-          .filter((item): item is Conversation => item !== null && typeof item === 'object' && 'participants' in item)
-          .filter((conv) => conv.participants.includes(userId))
-          .sort((a, b) => a.createdAt - b.createdAt);
-        callback(conversations);
-      } else {
-        callback([]);
-      }
-    },
-    (error) => {
-      console.error('Error listening to conversations:', error);
-    }
-  );
-
-  return () => off(conversationsRef);
 }
