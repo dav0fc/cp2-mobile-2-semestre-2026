@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^1.24.0",
     "@react-native-google-signin/google-signin": "^14.0.2",
     "expo": "~54.0.0",
     "expo-apple-authentication": "~8.0.8",

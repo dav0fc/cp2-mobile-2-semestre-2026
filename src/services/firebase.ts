@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getDatabase, Database } from 'firebase/database';
-import { getAuth, Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { getAuth, Auth } from 'firebase/auth';
 
 const config = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -16,4 +16,3 @@ const app: FirebaseApp = getApps().length ? getApp() : initializeApp(config);
 
 export const db: Database = getDatabase(app);
 export const auth: Auth = getAuth(app);
-setPersistence(auth, browserLocalPersistence).catch(() => {});
