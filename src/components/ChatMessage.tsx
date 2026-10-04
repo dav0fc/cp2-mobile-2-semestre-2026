@@ -1,21 +1,37 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { ChatMessage } from '../types/chat';
 
 type ChatMessageItemProps = {
   message: ChatMessage;
   isOwn: boolean;
+  showAuthor: boolean;
+  authorName?: string;
+  members?: { uid: string; name: string }[];
 };
 
-export default function ChatMessageItem({ message, isOwn }: ChatMessageItemProps) {
+export default function ChatMessageItem({
+  message,
+  isOwn,
+  showAuthor,
+  authorName,
+  members = [],
+}: ChatMessageItemProps) {
+  // Mensagem direcionada a um integrante ganha o rotulo "Para: nome"
+  let targetLabel: string | null = null;
+  if (message.target.type === 'member') {
+    const memberId = message.target.memberId;
+    const member = members.find((m) => m.uid === memberId);
+    targetLabel = member ? `Para: ${member.name}` : 'Para um integrante';
+  }
+
   return (
     <View style={[styles.container, isOwn ? styles.sent : styles.received]}>
-      <View
-        style={[
-          styles.bubble,
-          isOwn ? styles.sentBubble : styles.receivedBubble,
-        ]}
-      >
+      {showAuthor && !isOwn && authorName ? (
+        <Text style={styles.author}>{authorName}</Text>
+      ) : null}
+      <View style={[styles.bubble, isOwn ? styles.sentBubble : styles.receivedBubble]}>
+        {targetLabel ? <Text style={styles.targetLabel}>{targetLabel}</Text> : null}
         <Text style={[styles.text, isOwn ? styles.sentText : styles.receivedText]}>
           {message.text}
         </Text>
@@ -32,9 +48,8 @@ export default function ChatMessageItem({ message, isOwn }: ChatMessageItemProps
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 4,
-    marginHorizontal: 8,
-    alignItems: 'flex-end',
+    marginVertical: 3,
+    marginHorizontal: 12,
   },
   sent: {
     alignItems: 'flex-end',
@@ -42,27 +57,39 @@ const styles = StyleSheet.create({
   received: {
     alignItems: 'flex-start',
   },
+  author: {
+    fontSize: 11,
+    color: '#00838F',
+    fontWeight: '600',
+    marginBottom: 2,
+    marginLeft: 6,
+  },
   bubble: {
-    maxWidth: '75%',
+    maxWidth: '78%',
     padding: 10,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 1,
   },
   sentBubble: {
     backgroundColor: '#00BCD4',
     borderBottomRightRadius: 4,
   },
   receivedBubble: {
-    backgroundColor: 'rgba(200, 230, 255, 0.9)',
+    backgroundColor: '#E3F2FD',
     borderBottomLeftRadius: 4,
+  },
+  targetLabel: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginBottom: 4,
+    color: '#455A64',
   },
   text: {
     fontSize: 15,
-    fontFamily: 'System',
   },
   sentText: {
     color: '#FFFFFF',
@@ -72,7 +99,6 @@ const styles = StyleSheet.create({
   },
   time: {
     fontSize: 10,
-    fontFamily: 'System',
     marginTop: 4,
   },
   sentTime: {

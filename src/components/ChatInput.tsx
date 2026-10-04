@@ -1,18 +1,23 @@
-import React from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, TextInput, Text, TouchableOpacity, View } from 'react-native';
 
 type ChatInputProps = {
-  onSend: (text: string) => void;
+  onSend: (text: string) => Promise<void> | void;
   disabled?: boolean;
+  placeholder?: string;
 };
 
-export default function ChatInput({ onSend, disabled = false }: ChatInputProps) {
-  const [text, setText] = React.useState('');
+export default function ChatInput({ onSend, disabled = false, placeholder = 'Digite uma mensagem...' }: ChatInputProps) {
+  const [text, setText] = useState('');
+  const podeEnviar = text.trim().length > 0 && !disabled;
 
-  const handleSend = () => {
-    if (text.trim()) {
-      onSend(text.trim());
+  const handleSend = async () => {
+    if (!podeEnviar) return;
+    try {
+      await onSend(text.trim());
       setText('');
+    } catch {
+      // se falhou, o texto fica no campo para o usuario tentar de novo
     }
   };
 
@@ -23,19 +28,17 @@ export default function ChatInput({ onSend, disabled = false }: ChatInputProps) 
           style={styles.input}
           value={text}
           onChangeText={setText}
-          placeholder="Digite uma mensagem..."
+          placeholder={placeholder}
           placeholderTextColor="rgba(0, 188, 212, 0.5)"
           editable={!disabled}
           multiline
         />
         <TouchableOpacity
-          style={[styles.sendButton, (!text.trim() || disabled) && styles.sendDisabled]}
-          onPress={handleSend}
-          disabled={!text.trim() || disabled}
+          style={[styles.sendButton, !podeEnviar && styles.sendDisabled]}
+          onPress={() => void handleSend()}
+          disabled={!podeEnviar}
         >
-          <Text style={[styles.sendText, (!text.trim() || disabled) && styles.sendTextDisabled]}>
-            Enviar
-          </Text>
+          <Text style={styles.sendText}>Enviar</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -45,14 +48,14 @@ export default function ChatInput({ onSend, disabled = false }: ChatInputProps) 
 const styles = StyleSheet.create({
   container: {
     padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderTopWidth: 1,
     borderColor: 'rgba(0, 188, 212, 0.2)',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -62,7 +65,6 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-    fontFamily: 'System',
     maxHeight: 100,
     paddingVertical: 4,
   },
@@ -72,11 +74,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: '#00BCD4',
-    shadowColor: '#00BCD4',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
   },
   sendDisabled: {
     backgroundColor: 'rgba(0, 188, 212, 0.3)',
@@ -84,11 +81,7 @@ const styles = StyleSheet.create({
   sendText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontFamily: 'System',
     fontWeight: '600',
-  },
-  sendTextDisabled: {
-    color: 'rgba(255, 255, 255, 0.6)',
   },
   disabled: {
     opacity: 0.6,

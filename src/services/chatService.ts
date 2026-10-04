@@ -1,72 +1,100 @@
-import { ref, set, push, onValue, off } from 'firebase/database';
-import { ChatMessage, Conversation } from '../types/chat';
-import { db } from './firebase';
+import { onValue, push, ref, set } from 'firebase/database';
+import { collection, doc, getDoc, onSnapshot, setDoc, query, where } from 'firebase/firestore';
+import { db, firestore } from './firebase';
+import { ChatMessage, ConversationType, DirectConversation, MessageTarget } from '../types/chat';
+import { getDirectConversationId } from '../utils/conversationId';
+import { parseRtdbMessage } from '../utils/parseData';
 
-export type MessagesListenerCallback = (messages: ChatMessage[]) => void;
-
-export function findOrCreateConversation(
-  participant1: string,
-  participant2: string
+export async function findOrCreateDirectConversation(
+  uidA: string,
+  uidB: string
 ): Promise<string> {
-  const id = `${participant1}_${participant2}`;
-  const conversationPath = ref(db, `conversations/${id}`);
-  return new Promise((resolve, reject) => {
-    onValue(
-      conversationPath,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          off(conversationPath);
-          resolve(id);
-        } else {
-          const otherId = `${participant2}_${participant1}`;
-          const otherPath = ref(db, `conversations/${otherId}`);
-          onValue(
-            otherPath,
-            (otherSnapshot) => {
-              off(otherPath);
-              if (otherSnapshot.exists()) {
-                resolve(otherId);
-              } else {
-                resolve(id);
-                const conversationData: Conversation = {
-                  id,
-                  participants: [participant1, participant2],
-                  createdAt: Date.now(),
-                };
-                set(conversationPath, conversationData);
-              }
-            },
-            { onlyOnce: true }
-          );
-        }
-      },
-      { onlyOnce: true }
-    );
-  });
+  const id = getDirectConversationId(uidA, uidB);
+  const conversationRef = doc(firestore, 'directConversations', id);
+  const snapshot = await getDoc(conversationRef);
+  if (!snapshot.exists()) {
+    // Dois clientes criando ao mesmo tempo cai no mesmo id com o mesmo
+    // conteudo, entao o setDoc repetido nao quebra nada.
+    await setDoc(conversationRef, {
+      participantIds: [uidA, uidB],
+      createdAt: Date.now(),
+    });
+  }
+  return id;
 }
 
-export function sendMessage(
-  conversationId: string,
-  senderId: string,
-  receiverId: string,
-  text: string
-): Promise<void> {
-  const messagesRef = ref(db, `messages/${conversationId}`);
-  const newMessageRef = push(messagesRef);
+export async function getDirectConversation(id: string): Promise<DirectConversation | null> {
+  const snapshot = await getDoc(doc(firestore, 'directConversations', id));
+  if (!snapshot.exists()) return null;
+  const data = snapshot.data() as { participantIds?: unknown; createdAt?: unknown };
+  const participants = Array.isArray(data.participantIds)
+    ? data.participantIds.filter((p): p is string => typeof p === 'string')
+    : [];
+  return {
+    id,
+    participants,
+    createdAt: typeof data.createdAt === 'number' ? data.createdAt : Date.now(),
+  };
+}
+
+// Lista as conversas individuais do usuario (query simples de array-contains,
+// nao precisa de indice composto)
+export function listenToMyDirectConversations(
+  uid: string,
+  callback: (conversations: DirectConversation[]) => void,
+  onError?: (mensagem: string) => void
+): () => void {
+  const q = query(
+    collection(firestore, 'directConversations'),
+    where('participantIds', 'array-contains', uid)
+  );
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const conversations: DirectConversation[] = snapshot.docs.map((d) => {
+        const data = d.data() as { participantIds?: unknown; createdAt?: unknown };
+        const participants = Array.isArray(data.participantIds)
+          ? data.participantIds.filter((p): p is string => typeof p === 'string')
+          : [];
+        return {
+          id: d.id,
+          participants,
+          createdAt: typeof data.createdAt === 'number' ? data.createdAt : Date.now(),
+        };
+      });
+      callback(conversations);
+    },
+    () => onError?.('Não foi possível carregar suas conversas.')
+  );
+}
+
+export type NewMessageData = {
+  conversationId: string;
+  conversationType: ConversationType;
+  senderId: string;
+  text: string;
+  target: MessageTarget;
+  mentionedUserIds: string[];
+};
+
+// Persiste a mensagem no Realtime Database e devolve o id dela
+// (o id e usado depois para pedir o push na API)
+export async function sendMessage(data: NewMessageData): Promise<string> {
+  const messageRef = push(ref(db, `messages/${data.conversationId}`));
   const message: ChatMessage = {
-    id: newMessageRef.key ?? '',
-    conversationId,
-    senderId,
-    receiverId,
-    text,
+    ...data,
+    id: messageRef.key ?? '',
     createdAt: Date.now(),
   };
-  return set(newMessageRef, message);
+  await set(messageRef, message);
+  return message.id;
 }
 
+// Listener das mensagens da conversa; o retorno remove o listener
 export function listenToMessages(
   conversationId: string,
-  callback: MessagesListenerCallback
+  callback: (messages: ChatMessage[]) => void,
+  onError?: (mensagem: string) => void
 ): () => void {
   const messagesRef = ref(db, `messages/${conversationId}`);
   const unsubscribe = onValue(
@@ -74,18 +102,19 @@ export function listenToMessages(
     (snapshot) => {
       const data = snapshot.val();
       if (data && typeof data === 'object') {
-        const messages = Object.values(data)
-          .filter((item): item is ChatMessage => item !== null && typeof item === 'object' && 'text' in item)
+        const messages = Object.entries(data)
+          .map(([id, value]) => parseRtdbMessage(id, value))
+          .filter((message): message is ChatMessage => message !== null)
           .sort((a, b) => a.createdAt - b.createdAt);
         callback(messages);
       } else {
         callback([]);
       }
     },
-    (error) => {
-      console.error('Error listening to messages:', error);
+    (erro) => {
+      console.error('Erro ao ouvir mensagens:', erro);
+      onError?.('Não foi possível carregar as mensagens.');
     }
   );
-
-  return () => off(messagesRef);
+  return unsubscribe;
 }

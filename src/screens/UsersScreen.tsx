@@ -1,103 +1,175 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
+  Alert,
   FlatList,
   StyleSheet,
+  Text,
+  TextInput,
   TouchableOpacity,
-  Alert,
+  View,
 } from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
+import { listenToUsers } from '../services/userService';
+import { findOrCreateDirectConversation } from '../services/chatService';
+import { ChatUser } from '../types/user';
 import UserItem from '../components/UserItem';
 import Loading from '../components/Loading';
-import ErrorMessage from '../components/ErrorMessage';
-import { ChatUser } from '../types/user';
-import { isProviderCompatibleWith } from '../utils/chatRules';
-import { listenToAllUsers } from '../services/userService';
+
+type UsersScreenProps = {
+  mode: 'chat' | 'group';
+  initialSelectedIds?: string[];
+  onBack: () => void;
+  onOpenDirect?: (conversationId: string) => void;
+  onConfirmSelection?: (selectedIds: string[]) => void;
+};
 
 export default function UsersScreen({
-  onUserSelected,
-}: {
-  onUserSelected: (user: ChatUser) => void;
-}) {
-  const { user, logout, loading: authLoading } = useAuth();
+  mode,
+  initialSelectedIds = [],
+  onBack,
+  onOpenDirect,
+  onConfirmSelection,
+}: UsersScreenProps) {
+  const { user } = useAuth();
   const [users, setUsers] = useState<ChatUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds);
+  const [starting, setStarting] = useState(false);
 
-  useEffect(() => {
-    const unsub = listenToAllUsers((fetched) => {
-      setUsers(fetched);
-      setLoading(false);
-    });
+  const myUid = user?.uid ?? '';
 
-    return () => unsub();
+  const handleUsersLoaded = useCallback((loaded: ChatUser[]) => {
+    setUsers(loaded);
+    setLoading(false);
   }, []);
 
-  const handleLogout = useCallback(async () => {
-    try {
-      await logout();
-    } catch {
-      Alert.alert('Erro', 'Falha ao realizar logout');
-    }
-  }, [logout]);
+  // listener unico: a lista muda em tempo real quando alguem se cadastra
+  useEffect(() => {
+    const unsubscribe = listenToUsers(handleUsersLoaded, (mensagem) =>
+      console.error(mensagem)
+    );
+    return unsubscribe;
+  }, [handleUsersLoaded]);
 
   const filteredUsers = useMemo(() => {
-    if (!user) return [];
-    return users.filter(
-      (u) =>
-        u.uid !== user.uid &&
-        isProviderCompatibleWith(user.provider, u.provider)
-    );
-  }, [users, user]);
+    const termo = search.trim().toLowerCase();
+    return users.filter((u) => {
+      if (u.uid === myUid) return false;
+      if (!termo) return true;
+      return (
+        u.name.toLowerCase().includes(termo) ||
+        (u.email && u.email.toLowerCase().includes(termo))
+      );
+    });
+  }, [users, search, myUid]);
 
-  const renderItem = useCallback(
-    ({ item }: { item: ChatUser }) => (
-      <UserItem
-        user={item}
-        onPress={() => onUserSelected(item)}
-      />
-    ),
-    [onUserSelected]
+  const startDirectChat = useCallback(
+    async (target: ChatUser) => {
+      if (!myUid || starting) return;
+      if (target.uid === myUid) {
+        Alert.alert('Atenção', 'Você não pode conversar consigo mesmo.');
+        return;
+      }
+      setStarting(true);
+      try {
+        const conversationId = await findOrCreateDirectConversation(myUid, target.uid);
+        onOpenDirect?.(conversationId);
+      } catch (erro) {
+        console.error(erro);
+        Alert.alert('Erro', 'Não foi possível iniciar a conversa. Tente de novo.');
+      } finally {
+        setStarting(false);
+      }
+    },
+    [myUid, starting, onOpenDirect]
   );
 
-  const renderEmpty = useCallback(
-    () => (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>
-          Nenhum contato compatível encontrado.
-        </Text>
-        <Text style={styles.emptySubtext}>
-          Apenas usuários com autenticação diferente podem conversar.
-        </Text>
-      </View>
-    ),
+  const toggleSelection = useCallback(
+    (target: ChatUser) => {
+      setSelectedIds((previous) => {
+        if (previous.includes(target.uid)) {
+          return previous.filter((uid) => uid !== target.uid);
+        }
+        return [...previous, target.uid];
+      });
+    },
     []
   );
 
-  if (authLoading || loading) {
-    return <Loading />;
-  }
+  const handleUserPress = useCallback(
+    (target: ChatUser) => {
+      if (mode === 'chat') {
+        startDirectChat(target);
+      } else {
+        toggleSelection(target);
+      }
+    },
+    [mode, startDirectChat, toggleSelection]
+  );
+
+  if (loading) return <Loading />;
+
+  const titulo = mode === 'chat' ? 'Novo chat' : 'Selecionar integrantes';
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Contatos</Text>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Sair</Text>
+        <TouchableOpacity style={styles.backButton} onPress={onBack}>
+          <Text style={styles.backText}>←</Text>
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>{titulo}</Text>
+        <View style={styles.backButton} />
       </View>
 
-      {error && <ErrorMessage message={error} onDismiss={() => setError(null)} />}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar por nome ou e-mail..."
+          placeholderTextColor="rgba(0, 188, 212, 0.5)"
+          value={search}
+          onChangeText={setSearch}
+        />
+      </View>
 
       <FlatList
         data={filteredUsers}
         keyExtractor={(item) => item.uid}
-        renderItem={renderItem}
-        ListEmptyComponent={renderEmpty}
+        renderItem={({ item }) => (
+          <UserItem
+            user={item}
+            onPress={handleUserPress}
+            selected={mode === 'group' && selectedIds.includes(item.uid)}
+          />
+        )}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>
+              {search.trim()
+                ? 'Nenhum usuário encontrado para essa busca.'
+                : 'Ainda não há outros usuários cadastrados.'}
+            </Text>
+          </View>
+        }
       />
+
+      {mode === 'group' && (
+        <View style={styles.footer}>
+          <Text style={styles.footerInfo}>
+            {selectedIds.length} selecionado(s)
+            {myUid && !selectedIds.includes(myUid) ? ' + você' : ''}
+          </Text>
+          <TouchableOpacity
+            style={[styles.confirmButton, selectedIds.length === 0 && styles.confirmDisabled]}
+            onPress={() => onConfirmSelection?.(selectedIds)}
+            disabled={selectedIds.length === 0}
+          >
+            <Text style={styles.confirmText}>Confirmar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -105,57 +177,79 @@ export default function UsersScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 188, 212, 0.15)',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  backButton: {
+    padding: 8,
+  },
+  backText: {
+    fontSize: 24,
+    color: '#00BCD4',
   },
   headerTitle: {
-    fontSize: 22,
-    fontFamily: 'System',
+    fontSize: 18,
     fontWeight: '700',
     color: '#00838F',
   },
-  logoutButton: {
+  searchContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 87, 87, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 87, 87, 0.2)',
+    paddingBottom: 8,
   },
-  logoutText: {
-    fontSize: 13,
-    fontFamily: 'System',
-    color: '#E53935',
-    fontWeight: '600',
+  searchInput: {
+    backgroundColor: '#F5FEFF',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 188, 212, 0.25)',
   },
   listContent: {
     paddingBottom: 16,
   },
-  emptyContainer: {
+  empty: {
     alignItems: 'center',
-    justifyContent: 'center',
     paddingVertical: 60,
   },
   emptyText: {
-    fontSize: 16,
-    fontFamily: 'System',
+    fontSize: 14,
     color: '#78909C',
     textAlign: 'center',
+    paddingHorizontal: 32,
   },
-  emptySubtext: {
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderColor: 'rgba(0, 188, 212, 0.15)',
+  },
+  footerInfo: {
     fontSize: 13,
-    fontFamily: 'System',
-    color: '#B0BEC5',
-    textAlign: 'center',
-    marginTop: 8,
+    color: '#455A64',
+    fontWeight: '600',
+  },
+  confirmButton: {
+    backgroundColor: '#00BCD4',
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  confirmDisabled: {
+    opacity: 0.5,
+  },
+  confirmText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 });

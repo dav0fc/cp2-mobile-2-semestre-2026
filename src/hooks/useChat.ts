@@ -1,100 +1,78 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { ChatMessage } from '../types/chat';
-import { ChatUser } from '../types/user';
-import { findOrCreateConversation, sendMessage, listenToMessages } from '../services/chatService';
+import { useCallback, useEffect, useState } from 'react';
+import { ChatMessage, ConversationType, MessageTarget } from '../types/chat';
+import { listenToMessages, sendMessage as persistMessage } from '../services/chatService';
+import { requestMessageNotification } from '../services/notificationService';
+
+type UseChatParams = {
+  conversationId: string;
+  conversationType: ConversationType;
+  myUid: string;
+};
 
 type UseChatResult = {
   messages: ChatMessage[];
   loading: boolean;
   sending: boolean;
   error: string | null;
-  sendMessage: (text: string) => Promise<void>;
-  startConversation: (otherUser: ChatUser) => Promise<string>;
+  sendMessage: (text: string, target?: MessageTarget) => Promise<void>;
 };
 
-export function useChat(
-  myUserId: string,
-  myProvider: 'password' | 'google' | 'apple'
-): UseChatResult {
+export function useChat({ conversationId, conversationType, myUid }: UseChatParams): UseChatResult {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [otherUserId, setOtherUserId] = useState<string | null>(null);
-  const unsubscribeRef = useRef<(() => void) | null>(null);
 
+  // O listener vive enquanto a conversa estiver aberta e é removido
+  // quando a tela desmonta ou a conversa muda
   useEffect(() => {
-    return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (currentConversationId) {
-      const unsub = listenToMessages(currentConversationId, (fetchedMessages) => {
-        setMessages((previous) => fetchedMessages);
-      });
-      unsubscribeRef.current = unsub;
-      return () => unsub();
-    }
-    setMessages([]);
-  }, [currentConversationId]);
-
-  const startConversation = useCallback(
-    async (otherUser: ChatUser): Promise<string> => {
-      if (otherUser.uid === myUserId) {
-        throw new Error('Não é possível conversar consigo mesmo.');
-      }
-      setLoading(true);
-      setError(null);
-      try {
-        const conversationId = await findOrCreateConversation(myUserId, otherUser.uid);
-        setCurrentConversationId(conversationId);
-        setOtherUserId(otherUser.uid);
+    setLoading(true);
+    const unsubscribe = listenToMessages(
+      conversationId,
+      (fetchedMessages) => {
+        setMessages(fetchedMessages);
         setLoading(false);
-        return conversationId;
-      } catch (err) {
-        const message = (err as { message?: string }).message ?? 'Erro ao iniciar conversa';
-        setError(message);
+      },
+      (mensagem) => {
+        setError(mensagem);
         setLoading(false);
-        throw new Error(message);
       }
-    },
-    [myUserId]
-  );
+    );
+    return unsubscribe;
+  }, [conversationId]);
 
-  const sendMessageCallback = useCallback(
-    async (text: string) => {
-      if (!text.trim() || sending || !currentConversationId || !otherUserId) return;
-      if (otherUserId === myUserId) {
-        setError('Não é possível enviar mensagem para si mesmo.');
-        return;
-      }
+  const sendMessage = useCallback(
+    async (text: string, target: MessageTarget = { type: 'conversation' }) => {
+      const trimmed = text.trim();
+      if (!trimmed || sending) return;
+
       setSending(true);
       setError(null);
       try {
-        await sendMessage(currentConversationId, myUserId, otherUserId, text.trim());
+        const mentionedUserIds = target.type === 'member' ? [target.memberId] : [];
+        const messageId = await persistMessage({
+          conversationId,
+          conversationType,
+          senderId: myUid,
+          text: trimmed,
+          target,
+          mentionedUserIds,
+        });
+        // O push nao pode travar nem atrasar a conversa: se falhar,
+        // a mensagem ja esta entregue em tempo real pelo RTDB
+        requestMessageNotification(conversationId, messageId).catch((erro) => {
+          console.warn('Não foi possível solicitar o push da mensagem:', erro);
+        });
+      } catch (erro) {
+        console.error('Erro ao enviar mensagem:', erro);
+        setError('Não foi possível enviar a mensagem. Verifique sua conexão e tente de novo.');
+        throw erro;
+      } finally {
         setSending(false);
-      } catch (err) {
-        const message = (err as { message?: string }).message ?? 'Erro ao enviar mensagem';
-        setError(message);
-        setSending(false);
-        throw new Error(message);
       }
     },
-    [myUserId, otherUserId, currentConversationId, sending]
+    [conversationId, conversationType, myUid, sending]
   );
 
-  return {
-    messages,
-    loading,
-    sending,
-    error,
-    sendMessage: sendMessageCallback,
-    startConversation,
-  };
+  return { messages, loading, sending, error, sendMessage };
 }
