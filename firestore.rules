@@ -1,0 +1,89 @@
+rules_version = '2';
+// Regras do Cloud Firestore
+// Perfis, grupos, conversas individuais e dispositivos
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    // ---------------- USERS ----------------
+    // A lista de usuarios e aberta para quem esta autenticado (precisa
+    // buscar usuarios para iniciar conversas). Cada um so edita o proprio
+    // perfil.
+    match /users/{uid} {
+      allow read: if autenticado();
+      allow create: if autenticado() && request.auth.uid == uid;
+      allow update: if autenticado() && request.auth.uid == uid;
+      allow delete: if false;
+
+      // Tokens de push: so o dono do dispositivo acessa
+      match /devices/{deviceId} {
+        allow read: if autenticado() && request.auth.uid == uid;
+        allow write: if autenticado()
+          && request.auth.uid == uid
+          && request.resource.data.token is string
+          && request.resource.data.enabled is bool;
+      }
+    }
+
+    // ---------------- DIRECT CONVERSATIONS ----------------
+    // So participantes leem/gravam. A criacao e idempotente (id derivado
+    // dos dois uids), entao o proprio criador precisa estar no conjunto.
+    match /directConversations/{conversationId} {
+      allow read: if autenticado()
+        && request.auth.uid in resource.data.participantIds;
+      allow create: if autenticado()
+        && request.auth.uid in request.resource.data.participantIds
+        && request.resource.data.participantIds.size() == 2
+        && request.resource.data.createdAt is int;
+      allow update, delete: if false;
+    }
+
+    // ---------------- GROUPS ----------------
+    // So integrantes leem. So o dono atualiza (membro, limite, politica,
+    // nome, foto). O limite de integrantes e cobrado aqui: nenhuma escrita
+    // pode deixar memberIds maior que memberLimit, nem o dono pode reduzir
+    // o limite abaixo da quantidade atual.
+    match /groups/{groupId} {
+      function donoAtual() {
+        return autenticado() && request.auth.uid == resource.data.ownerId;
+      }
+
+      allow read: if autenticado()
+        && request.auth.uid in resource.data.memberIds;
+
+      allow create: if autenticado()
+        && request.auth.uid == request.resource.data.ownerId
+        && request.auth.uid in request.resource.data.memberIds
+        && request.resource.data.memberIds.size() >= 2
+        && request.resource.data.memberLimit is int
+        && request.resource.data.memberLimit >= 2
+        && request.resource.data.memberIds.size() <= request.resource.data.memberLimit
+        && request.resource.data.name is string
+        && request.resource.data.notificationPolicy is string;
+
+      allow update: if donoAtual()
+        // o dono nao pode trocar o dono
+        && request.resource.data.ownerId == resource.data.ownerId
+        // o dono nao pode sair dos proprio grupo (deixa o grupo orfao)
+        && request.auth.uid in request.resource.data.memberIds
+        // limite valido e sempre >= integrantes atuais
+        && request.resource.data.memberLimit is int
+        && request.resource.data.memberLimit >= 2
+        && request.resource.data.memberLimit >= request.resource.data.memberIds.size()
+        // a lista de integrantes nunca estoura o limite
+        && request.resource.data.memberIds.size() <= request.resource.data.memberLimit;
+
+      allow delete: if donoAtual();
+    }
+
+    // ---------------- SENT NOTIFICATIONS ----------------
+    // Colecao usada pela API para evitar push duplicado.
+    // Somente escrita administrativa (Admin SDK ignora as regras).
+    match /sentNotifications/{messageId} {
+      allow read, write: if false;
+    }
+  }
+}
