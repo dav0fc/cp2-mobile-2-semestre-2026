@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 type ErrorMessageProps = {
   message: string;
@@ -11,9 +11,9 @@ export default function ErrorMessage({ message, onDismiss }: ErrorMessageProps) 
     <View style={styles.container}>
       <Text style={styles.text}>{message}</Text>
       {onDismiss && (
-        <Text style={styles.dismiss} onPress={onDismiss}>
-          Fechar
-        </Text>
+        <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={styles.dismiss}>Fechar</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
