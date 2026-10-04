@@ -1,0 +1,11 @@
+Colocar aqui os prints das telas antes de entregar:
+
+- login.png
+- cadastro.png
+- conversas.png
+- chat-individual.png
+- chat-grupo.png
+- criar-grupo.png
+- integrantes.png
+- perfil.png
+- notificacao.png  (evidência de push recebido no aparelho)
