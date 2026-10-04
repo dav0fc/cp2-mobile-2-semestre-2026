@@ -2,169 +2,71 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  getAuth,
-  GoogleAuthProvider,
-  signInWithCredential,
-  OAuthProvider,
+  updateProfile,
   User,
 } from 'firebase/auth';
-import * as AppleAuthentication from 'expo-apple-authentication';
-import { Platform } from 'react-native';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, firestore } from './firebase';
+import { ChatUser, RegisterData } from '../types/user';
 
-let GoogleSignin: typeof import('@react-native-google-signin/google-signin').GoogleSignin | null = null;
-
-try {
-  GoogleSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
-} catch {
-  // Native module not available (e.g., Expo Go)
-}
-
-const GOOGLE_WEB_CLIENT_ID: string | undefined =
-  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-
-type AuthResult = {
-  user: User | null;
-  error: string | null;
-};
-
-export async function signInWithEmailAndPasswordService(
-  email: string,
-  password: string
-): Promise<AuthResult> {
-  try {
-    const authInstance = getAuth();
-    const credential = await signInWithEmailAndPassword(
-      authInstance,
-      email,
-      password
-    );
-    return { user: credential.user, error: null };
-  } catch (err) {
-    const error = err as { code?: string; message?: string };
-    return {
-      user: null,
-      error: error.message ?? 'Falha no login com e-mail',
-    };
+function traduzirErroAuth(erro: unknown): string {
+  const code = (erro as { code?: string }).code ?? '';
+  switch (code) {
+    case 'auth/invalid-email':
+      return 'E-mail inválido. Verifique o formato.';
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'E-mail ou senha incorretos.';
+    case 'auth/email-already-in-use':
+      return 'Este e-mail já está cadastrado.';
+    case 'auth/weak-password':
+      return 'A senha deve ter pelo menos 6 caracteres.';
+    case 'auth/too-many-requests':
+      return 'Muitas tentativas. Aguarde um pouco e tente de novo.';
+    case 'auth/network-request-failed':
+      return 'Falha de conexão. Verifique sua internet.';
+    default:
+      return 'Não foi possível continuar. Tente novamente.';
   }
 }
 
-export async function createUserWithEmailAndPasswordService(
-  email: string,
-  password: string
-): Promise<AuthResult> {
+export async function loginUser(email: string, password: string): Promise<void> {
   try {
-    const authInstance = getAuth();
-    const credential = await createUserWithEmailAndPassword(
-      authInstance,
-      email,
-      password
-    );
-    return { user: credential.user, error: null };
-  } catch (err) {
-    const error = err as { code?: string; message?: string };
-    return {
-      user: null,
-      error: error.message ?? 'Falha no cadastro',
-    };
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (erro) {
+    throw new Error(traduzirErroAuth(erro));
   }
 }
 
-export async function signInWithGoogle(): Promise<AuthResult> {
-  if (!GoogleSignin) {
-    return { user: null, error: 'Google Sign-In não disponível. Use um build nativo.' };
-  }
-  if (!GOOGLE_WEB_CLIENT_ID) {
-    return {
-      user: null,
-      error:
-        'Login com Google não configurado. Defina EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID no arquivo .env (veja o passo a passo no README).',
-    };
-  }
+export async function registerUser(data: RegisterData): Promise<User> {
   try {
-    GoogleSignin.configure({
-      webClientId: GOOGLE_WEB_CLIENT_ID,
-    });
-    const response = await GoogleSignin.signIn();
-    const idToken = (response as { idToken?: string }).idToken;
-
-    if (!idToken) {
-      return { user: null, error: 'Google Sign-In: token não recebido' };
-    }
-
-    const authInstance = getAuth();
-    const googleCredential = GoogleAuthProvider.credential(idToken);
-    const credential = await signInWithCredential(
-      authInstance,
-      googleCredential
-    );
-    return { user: credential.user, error: null };
-  } catch (err) {
-    const error = err as { code?: string; message?: string };
-    return {
-      user: null,
-      error: error.message ?? 'Falha no login com Google',
+    const credential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+    // Mantem o nome no proprio Auth para o perfil ter uma boa fallback
+    await updateProfile(credential.user, { displayName: data.name });
+    const perfil: ChatUser = {
+      uid: credential.user.uid,
+      name: data.name,
+      email: data.email,
+      phoneNumber: data.phoneNumber,
+      birthDate: data.birthDate,
+      photoUrl: '',
+      createdAt: Date.now(),
     };
+    await setDoc(doc(firestore, 'users', credential.user.uid), perfil);
+    return credential.user;
+  } catch (erro) {
+    if ((erro as { code?: string }).code?.startsWith('auth/')) {
+      throw new Error(traduzirErroAuth(erro));
+    }
+    throw new Error('O cadastro foi criado, mas o perfil não foi salvo. Tente entrar novamente.');
   }
 }
 
-export async function signInWithApple(): Promise<AuthResult> {
+export async function logoutUser(): Promise<void> {
   try {
-    if (Platform.OS === 'web') {
-      return { user: null, error: 'Apple só está disponível em build nativo' };
-    }
-    const available = await AppleAuthentication.isAvailableAsync();
-    if (!available) {
-      return {
-        user: null,
-        error: 'Sign in with Apple não está disponível nesta plataforma.',
-      };
-    }
-
-    const array = new Uint8Array(16);
-    crypto.getRandomValues(array);
-    const nonce = Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
-    const appleCredential = await AppleAuthentication.signInAsync({
-      requestedScopes: [
-        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-        AppleAuthentication.AppleAuthenticationScope.EMAIL,
-      ],
-      nonce,
-    });
-
-    const { identityToken, fullName, email } = appleCredential;
-    if (!identityToken) {
-      return { user: null, error: 'Apple Sign-In: token não recebido' };
-    }
-
-    const authInstance = getAuth();
-    const provider = new OAuthProvider('apple.com');
-    const firebaseCredential = provider.credential({
-      idToken: identityToken,
-      rawNonce: nonce,
-    });
-    const credential = await signInWithCredential(
-      authInstance,
-      firebaseCredential
-    );
-    return { user: credential.user, error: null };
-  } catch (err) {
-    const error = err as { code?: string; message?: string };
-    if (error.code === 'ERR_REQUEST_CANCELED') {
-      return { user: null, error: null };
-    }
-    return {
-      user: null,
-      error: error.message ?? 'Falha no login com Apple',
-    };
-  }
-}
-
-export async function signOutService(): Promise<void> {
-  try {
-    const authInstance = getAuth();
-    await signOut(authInstance);
-  } catch (err) {
-    const error = err as { message?: string };
-    throw new Error(error.message ?? 'Falha no logout');
+    await signOut(auth);
+  } catch (erro) {
+    throw new Error('Não foi possível sair da conta. Tente novamente.');
   }
 }

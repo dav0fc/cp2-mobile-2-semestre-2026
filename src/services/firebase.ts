@@ -1,18 +1,17 @@
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getDatabase, Database } from 'firebase/database';
-import { getAuth, Auth } from 'firebase/auth';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getDatabase } from 'firebase/database';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
+import firebaseConfig from '../../firebaseConfig.json';
 
-const config = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  databaseURL: process.env.EXPO_PUBLIC_FIREBASE_DATABASE_URL,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
-};
+// A configuracao do SDK cliente fica no firebaseConfig.json versionado no repo
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-const app: FirebaseApp = getApps().length ? getApp() : initializeApp(config);
+export const auth = getAuth(app);
+export const db = getDatabase(app);
+export const firestore = getFirestore(app);
+export const storage = getStorage(app);
 
-export const db: Database = getDatabase(app);
-export const auth: Auth = getAuth(app);
+// URL publica da API da equipe (definida no .env do app)
+export const API_URL: string = process.env.EXPO_PUBLIC_API_URL ?? '';

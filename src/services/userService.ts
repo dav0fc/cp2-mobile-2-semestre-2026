@@ -1,74 +1,72 @@
-import { ref, set, onValue, off, get } from 'firebase/database';
-import { ChatUser, UserRecord, AuthProvider } from '../types/user';
-import { db } from './firebase';
+import {
+  collection,
+  doc,
+  getDoc,
+  onSnapshot,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
+import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
+import { firestore, storage } from './firebase';
+import { ChatUser } from '../types/user';
+import { parseUserDoc } from '../utils/parseData';
 
-export function saveUser(userData: UserRecord, uid: string): Promise<void> {
-  const userPath = ref(db, `users/${uid}`);
-  return set(userPath, userData);
+export async function getProfile(uid: string): Promise<ChatUser | null> {
+  const snapshot = await getDoc(doc(firestore, 'users', uid));
+  if (!snapshot.exists()) return null;
+  return parseUserDoc(snapshot.id, snapshot.data());
 }
 
-export function getAllUsers(): Promise<ChatUser[]> {
-  const usersRef = ref(db, 'users');
-  return new Promise((resolve) => {
-    get(usersRef)
-      .then((snapshot) => {
-        const data = snapshot.val();
-        if (data && typeof data === 'object') {
-          const users: ChatUser[] = Object.entries(data)
-            .map(([uid, value]): ChatUser | null => {
-              if (!value || typeof value !== 'object') return null;
-              const record = value as Record<string, unknown>;
-              if (!record.name) return null;
-              return {
-                uid,
-                name: String(record.name),
-                email: record.email ? String(record.email) : null,
-                provider: String(record.provider) as AuthProvider,
-              };
-            })
-            .filter((u): u is ChatUser => u !== null);
-          resolve(users);
-        } else {
-          resolve([]);
-        }
-      })
-      .catch(() => {
-        resolve([]);
-      });
-  });
+export async function fetchProfiles(uids: string[]): Promise<ChatUser[]> {
+  const results = await Promise.all(uids.map((uid) => getProfile(uid)));
+  return results.filter((profile): profile is ChatUser => profile !== null);
 }
 
-export function listenToAllUsers(
-  callback: (users: ChatUser[]) => void
+export function listenToUsers(
+  callback: (users: ChatUser[]) => void,
+  onError?: (mensagem: string) => void
 ): () => void {
-  const usersRef = ref(db, 'users');
-  const unsubscribe = onValue(
-    usersRef,
+  return onSnapshot(
+    collection(firestore, 'users'),
     (snapshot) => {
-      const data = snapshot.val();
-      if (data && typeof data === 'object') {
-        const users: ChatUser[] = Object.entries(data)
-          .map(([uid, value]): ChatUser | null => {
-            if (!value || typeof value !== 'object') return null;
-            const record = value as Record<string, unknown>;
-            if (!record.name) return null;
-            return {
-              uid,
-              name: String(record.name),
-              email: record.email ? String(record.email) : null,
-              provider: String(record.provider) as AuthProvider,
-            };
-          })
-          .filter((u): u is ChatUser => u !== null);
-        callback(users);
-      } else {
-        callback([]);
-      }
+      const users = snapshot.docs
+        .map((d) => parseUserDoc(d.id, d.data()))
+        .filter((user): user is ChatUser => user !== null);
+      callback(users);
     },
-    (error) => {
-      console.error('Error listening to users:', error);
-    }
+    () => onError?.('Não foi possível carregar a lista de usuários.')
   );
+}
 
-  return () => off(usersRef);
+export async function saveUserProfile(profile: ChatUser): Promise<void> {
+  await setDoc(doc(firestore, 'users', profile.uid), profile);
+}
+
+export async function updateProfilePhoto(uid: string, photoUrl: string): Promise<void> {
+  await updateDoc(doc(firestore, 'users', uid), { photoUrl });
+}
+
+// Sobe a imagem para o Firebase Storage e salva so a URL no Firestore
+export async function uploadProfilePhoto(uid: string, fileUri: string): Promise<string> {
+  const resposta = await fetch(fileUri);
+  const blob = await resposta.blob();
+  const imagemRef = storageRef(storage, `users/${uid}/perfil.jpg`);
+  await uploadBytes(imagemRef, blob, { contentType: blob.type || 'image/jpeg' });
+  const url = await getDownloadURL(imagemRef);
+  await updateDoc(doc(firestore, 'users', uid), { photoUrl: url });
+  return url;
+}
+
+export async function saveDevice(
+  uid: string,
+  deviceId: string,
+  token: string,
+  platform: string
+): Promise<void> {
+  await setDoc(doc(firestore, 'users', uid, 'devices', deviceId), {
+    token,
+    platform,
+    enabled: true,
+    updatedAt: Date.now(),
+  });
 }
