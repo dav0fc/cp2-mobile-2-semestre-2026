@@ -188,7 +188,7 @@ A API grava uma marca `sentNotifications/{messageId}` no Firestore dentro de uma
 
 Node.js + Express + TypeScript + Firebase Admin SDK, hospedada com URL pública HTTPS.
 
-**URL pública da API:** `https://SUBSTITUA-PELO-SEU-ENDEREÇO.onrender.com`
+**URL pública da API:** `https://frutigerchat.onrender.com`
 
 ### Endpoints
 
@@ -200,7 +200,7 @@ Node.js + Express + TypeScript + Firebase Admin SDK, hospedada com URL pública 
 ### Como verificar se a API está no ar
 
 ```bash
-curl https://SUBSTITUA-PELO-SEU-ENDEREÇO.onrender.com/health
+curl https://frutigerchat.onrender.com/health
 ```
 
 Resposta esperada:
