@@ -20,9 +20,7 @@
         "backgroundColor": "#FFFFFF"
       },
       "package": "com.dav0fc.frutigerchat",
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      "googleServicesFile": "./google-services.json"
     },
     "extra": {
       "eas": {
