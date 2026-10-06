@@ -2,9 +2,10 @@
   "rules": {
     "messages": {
       "$conversationId": {
+        ".read": "auth != null",
         "$messageId": {
           ".read": "auth != null",
-          ".write": "auth != null &&\n            newData.hasChildren(['conversationId', 'conversationType', 'senderId', 'text', 'target', 'mentionedUserIds', 'createdAt']) &&\n            newData.child('senderId').val() === auth.uid &&\n            (newData.child('conversationType').val() === 'direct' ||\n             newData.child('conversationType').val() === 'group') &&\n            newData.child('text').val().length > 0 &&\n            newData.child('text').val().length <= 1000 &&\n            (newData.child('target').child('type').val() === 'conversation' ||\n             (newData.child('target').child('type').val() === 'member' &&\n              newData.child('target').child('memberId').val().length > 0))"
+          ".write": "auth != null &&\n            newData.hasChildren(['conversationId', 'conversationType', 'senderId', 'text', 'target', 'createdAt']) &&\n            newData.child('senderId').val() === auth.uid &&\n            (newData.child('conversationType').val() === 'direct' ||\n             newData.child('conversationType').val() === 'group') &&\n            newData.child('text').val().length > 0 &&\n            newData.child('text').val().length <= 1000 &&\n            (newData.child('target').child('type').val() === 'conversation' ||\n             (newData.child('target').child('type').val() === 'member' &&\n              newData.child('target').child('memberId').val().length > 0))"
         }
       }
     }
