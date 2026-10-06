@@ -31,6 +31,11 @@ export function getAdminApp(): admin.app.App {
         clientEmail,
         privateKey,
       }),
+      // O Admin SDK nao deduz mais a URL do RTDB do projectId — definir explicitamente
+      // (mesma URL do firebaseConfig.json do app; FIREBASE_DATABASE_URL sobrescreve)
+      databaseURL:
+        process.env.FIREBASE_DATABASE_URL ??
+        `https://${projectId}-default-rtdb.firebaseio.com`,
     });
   } catch (erro) {
     // Diagnostico sem vazar a chave: compara comprimento/forma com o esperado
