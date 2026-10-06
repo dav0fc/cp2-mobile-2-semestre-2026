@@ -29,7 +29,8 @@ export function createApp() {
 // So sobe o servidor quando o arquivo e executado diretamente
 // (os testes importam createApp sem abrir porta)
 if (require.main === module) {
-  const port = Number(process.env.PORT ?? 3001);
+  // || em vez de ?? para cair em 3001 se PORT estiver vazio ou invalido
+  const port = Number(process.env.PORT) || 3001;
   createApp().listen(port, () => {
     console.log(`API do FrutigerChat rodando na porta ${port}`);
   });
