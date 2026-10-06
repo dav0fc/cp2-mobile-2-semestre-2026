@@ -133,13 +133,7 @@ firebase deploy --only firestore:rules
 firebase deploy --only database:rules
 ```
 
-4. No app, crie um `.env` (baseado no `.env.example`) com a URL da API:
-
-```
-EXPO_PUBLIC_API_URL=https://sua-api-publicada.com
-```
-
-> O `.env` não entra no repositório (o `.env.example` lista as variáveis).
+4. O `.env` do app **já está versionado no repositório com os valores reais** (pedido do professor, para testar direto no Expo Go sem configurar nada): URL pública da API publicada no Render e chave do imgbb. O `.env.example` lista as mesmas variáveis com marcadores, para referência.
 
 ## Fotos: onde ficam as imagens
 

@@ -2,7 +2,7 @@ node_modules
 .expo
 dist
 tsconfig.tsbuildinfo
-.env
+# .env versionado de proposito (pedido do professor para testar no Expo Go e no Render)
 .env.local
 README_TRABALHO_REACT_NATIVE_CHAT_FIREBASE.md
 README_TRABALHO_REACT_NATIVE_CHAT_FIREBASE_GRUPOS_PUSH.md
