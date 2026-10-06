@@ -7,6 +7,13 @@
         "buildType": "apk",
         "googleServicesFile": "google-services.json"
       }
+    },
+    "apk": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "googleServicesFile": "google-services.json"
+      }
     }
   }
 }

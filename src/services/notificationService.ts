@@ -50,20 +50,35 @@ export async function registerDeviceToken(uid: string): Promise<boolean> {
   return true;
 }
 
+// Extrai os dados de navegação do payload (null se nao confere)
+function parseTapData(data: Record<string, unknown> | null | undefined): NotificationTapData | null {
+  if (!data) return null;
+  const conversationId = typeof data.conversationId === 'string' ? data.conversationId : null;
+  const conversationType =
+    data.conversationType === 'direct' || data.conversationType === 'group'
+      ? data.conversationType
+      : null;
+  return conversationId && conversationType ? { conversationId, conversationType } : null;
+}
+
 export function listenForNotificationTaps(onTap: (data: NotificationTapData) => void): () => void {
   const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-    const data = response.notification.request.content.data;
-    if (!data) return;
-    const conversationId = typeof data.conversationId === 'string' ? data.conversationId : null;
-    const conversationType =
-      data.conversationType === 'direct' || data.conversationType === 'group'
-        ? data.conversationType
-        : null;
-    if (conversationId && conversationType) {
-      onTap({ conversationId, conversationType });
-    }
+    const data = parseTapData(response.notification.request.content.data);
+    if (data) onTap(data);
   });
   return () => subscription.remove();
+}
+
+// Ultimo toque em notificacao (inclusive o que LIGOU o app fechado): devolve
+// os dados e limpa o registro para nao reprocessar o mesmo toque.
+// Em processo novo so existe resposta se o toque abriu o app — sem toque antigo
+export function getInitialNotification(): NotificationTapData | null {
+  const response = Notifications.getLastNotificationResponse();
+  const data = parseTapData(response?.notification.request.content.data);
+  if (data) {
+    Notifications.clearLastNotificationResponse();
+  }
+  return data;
 }
 
 // Pede a API da equipe para enviar o push desta mensagem.

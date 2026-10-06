@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNotifications } from '../hooks/useNotifications';
+import { getInitialNotification } from '../services/notificationService';
 import { fetchProfiles, getProfile } from '../services/userService';
 import { getGroup } from '../services/groupService';
 import { getOtherParticipant } from '../utils/conversationId';
@@ -121,6 +122,16 @@ export default function AppRouter() {
   );
 
   const { permission } = useNotifications(user, handleNotificationTap);
+
+  // Cold start via push: se o app foi aberto pelo toque na notificacao
+  // (app estava fechado), abre a conversa assim que o login existir
+  const launchTapConsumedRef = useRef(false);
+  useEffect(() => {
+    if (!user || launchTapConsumedRef.current) return;
+    launchTapConsumedRef.current = true;
+    const data = getInitialNotification();
+    if (data) handleNotificationTap(data);
+  }, [user, handleNotificationTap]);
 
   if (authLoading) return <Loading />;
 
