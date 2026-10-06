@@ -6,3 +6,7 @@ tsconfig.tsbuildinfo
 .env.local
 README_TRABALHO_REACT_NATIVE_CHAT_FIREBASE.md
 README_TRABALHO_REACT_NATIVE_CHAT_FIREBASE_GRUPOS_PUSH.md
+
+# Native folder gerada pelo prebuild (EAS roda prebuild na nuvem)
+android/
+ios/
