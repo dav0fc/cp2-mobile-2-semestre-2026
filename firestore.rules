@@ -32,8 +32,10 @@ service cloud.firestore {
     // So participantes leem/gravam. A criacao e idempotente (id derivado
     // dos dois uids), entao o proprio criador precisa estar no conjunto.
     match /directConversations/{conversationId} {
+      // resource == null: getDoc no documento que ainda nao existe precisa
+      // ler (e receber miss) para o fluxo criar a conversa na primeira vez
       allow read: if autenticado()
-        && request.auth.uid in resource.data.participantIds;
+        && (resource == null || request.auth.uid in resource.data.participantIds);
       allow create: if autenticado()
         && request.auth.uid in request.resource.data.participantIds
         && request.resource.data.participantIds.size() == 2
@@ -51,8 +53,9 @@ service cloud.firestore {
         return autenticado() && request.auth.uid == resource.data.ownerId;
       }
 
+      // resource == null: grupo deletado devolve miss em vez de erro de permissao
       allow read: if autenticado()
-        && request.auth.uid in resource.data.memberIds;
+        && (resource == null || request.auth.uid in resource.data.memberIds);
 
       allow create: if autenticado()
         && request.auth.uid == request.resource.data.ownerId

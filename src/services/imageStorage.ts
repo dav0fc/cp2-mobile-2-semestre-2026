@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system';
 import { IMGBB_KEY } from './firebase';
 
 type ImgbbResponse = {
@@ -25,9 +26,9 @@ export async function uploadImage(fileUri: string, nome: string): Promise<string
     throw new Error('Chave do imgbb nao configurada (EXPO_PUBLIC_IMGBB_KEY no .env).');
   }
 
-  const resposta = await fetch(fileUri);
-  const blob = await resposta.blob();
-  const base64 = bufferToBase64(await blob.arrayBuffer());
+  // File do expo-file-system: o Blob do fetch do RN nao tem arrayBuffer
+  const file = new File(fileUri);
+  const base64 = bufferToBase64(await file.arrayBuffer());
 
   const corpo = new URLSearchParams();
   corpo.set('key', IMGBB_KEY);

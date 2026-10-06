@@ -19,7 +19,15 @@
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF"
       },
-      "package": "com.dav0fc.frutigerchat"
+      "package": "com.dav0fc.frutigerchat",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "eb39bfb4-c050-4872-aa37-e581bdb059af"
+      }
     }
   }
 }
