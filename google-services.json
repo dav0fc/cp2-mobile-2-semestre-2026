@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "523659806734",
+    "project_id": "frutigerchat-bacd3",
+    "storage_bucket": "frutigerchat-bacd3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:523659806734:android:6cca08c825b0f79cf4d45f",
+        "android_client_info": {
+          "package_name": "com.dav0fc.frutigerchat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDccvExWn8Rslg7DOZaf3K2CIqpslNVtRE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

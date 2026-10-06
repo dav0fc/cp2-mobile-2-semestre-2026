@@ -6,8 +6,8 @@ import {
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
-import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
-import { firestore, storage } from './firebase';
+import { firestore } from './firebase';
+import { uploadImage } from './imageStorage';
 import { ChatUser } from '../types/user';
 import { parseUserDoc } from '../utils/parseData';
 
@@ -46,13 +46,9 @@ export async function updateProfilePhoto(uid: string, photoUrl: string): Promise
   await updateDoc(doc(firestore, 'users', uid), { photoUrl });
 }
 
-// Sobe a imagem para o Firebase Storage e salva so a URL no Firestore
+// Sobe a imagem para o imgbb e salva so a URL no Firestore
 export async function uploadProfilePhoto(uid: string, fileUri: string): Promise<string> {
-  const resposta = await fetch(fileUri);
-  const blob = await resposta.blob();
-  const imagemRef = storageRef(storage, `users/${uid}/perfil.jpg`);
-  await uploadBytes(imagemRef, blob, { contentType: blob.type || 'image/jpeg' });
-  const url = await getDownloadURL(imagemRef);
+  const url = await uploadImage(fileUri, `perfil-${uid}`);
   await updateDoc(doc(firestore, 'users', uid), { photoUrl: url });
   return url;
 }

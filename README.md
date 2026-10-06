@@ -20,7 +20,7 @@ Aplicativo de chat em React Native com TypeScript, usando Firebase como backend.
 - Firebase Realtime Database (mensagens)
 - Cloud Firestore (perfis, grupos, conversas individuais, dispositivos)
 - Firebase Cloud Messaging (FCM) para o push
-- Firebase Storage (fotos de perfil e de grupo)
+- imgbb (armazenamento das fotos de perfil e de grupo — serviço externo, plano gratuito)
 - Expo Notifications (token e recepção do push no app)
 - Node.js + Express + Firebase Admin SDK (API de notificações)
 
@@ -32,7 +32,7 @@ Aplicativo de chat em React Native com TypeScript, usando Firebase como backend.
 | **Realtime Database** | Mensagens (individuais e de grupo), listeners em tempo real das conversas |
 | **Cloud Firestore** | Perfis dos usuários, grupos e metadados, integrantes, limite de integrantes, política de notificações, tokens de dispositivos, conversas individuais |
 | **Cloud Messaging (FCM)** | Entrega do push em segundo plano/fechado; a conversa de origem vai no payload |
-| **Storage** | Arquivos das fotos de perfil e de grupo (no banco fica só a URL) |
+| **imgbb** (serviço externo) | Arquivos das fotos de perfil e de grupo (no Firestore fica só a URL) |
 
 ## Estrutura do projeto
 
@@ -40,10 +40,9 @@ Aplicativo de chat em React Native com TypeScript, usando Firebase como backend.
 ├── App.tsx
 ├── app.json
 ├── firebaseConfig.json        # config do SDK cliente (versionada de propósito)
-├── .env.example               # variaveis do app (URL da API)
+├── .env.example               # variaveis do app (URL da API, chave do imgbb)
 ├── firestore.rules            # regras do Firestore
 ├── database.rules.json        # regras do Realtime Database
-├── storage.rules              # regras do Storage
 ├── server/                    # API de notificações (Express + firebase-admin)
 │   ├── src/
 │   │   ├── app.ts
@@ -125,14 +124,13 @@ A API lê as credenciais do Firebase Admin pela variável de ambiente (veja "API
 
 ## Configuração do Firebase
 
-1. Projeto no Firebase Console com: Authentication (e-mail/senha), Realtime Database, Cloud Firestore, Cloud Messaging e Storage habilitados.
+1. Projeto no Firebase Console com: Authentication (e-mail/senha), Realtime Database, Cloud Firestore e Cloud Messaging habilitados. As fotos não usam o Firebase: ficam no imgbb (controle > API, para obter a chave).
 2. A configuração do SDK **cliente** fica no arquivo `firebaseConfig.json` na raiz (versionado no repositório, como pedido no enunciado). O app lê esse arquivo direto — não há segredo ali, é o identificador público do projeto.
-3. As regras de segurança ficam versionadas em `firestore.rules`, `database.rules.json` e `storage.rules`. Publique com o Firebase CLI:
+3. As regras de segurança ficam versionadas em `firestore.rules` e `database.rules.json`. Publique com o Firebase CLI:
 
 ```bash
 firebase deploy --only firestore:rules
 firebase deploy --only database:rules
-firebase deploy --only storage
 ```
 
 4. No app, crie um `.env` (baseado no `.env.example`) com a URL da API:
@@ -145,7 +143,7 @@ EXPO_PUBLIC_API_URL=https://sua-api-publicada.com
 
 ## Fotos: onde ficam as imagens
 
-As fotos de perfil e de grupo são escolhidas na galeria do aparelho (Expo Image Picker, que pede a permissão de acesso à biblioteca), enviadas ao **Firebase Storage** nas pastas `users/{uid}/` e `groups/{groupId}/`, e **apenas a URL** é gravada no Firestore. Nenhuma imagem é salva em Base64 no banco. Se a foto não existir ou falhar ao carregar, a interface mostra um avatar padrão com a inicial do nome.
+As fotos de perfil e de grupo são escolhidas na galeria do aparelho (Expo Image Picker, que pede a permissão de acesso à biblioteca) e enviadas ao **imgbb** (plano gratuito; a chave da conta fica em `EXPO_PUBLIC_IMGBB_KEY` no `.env` do app, listada no `.env.example`). **Apenas a URL** resultante é gravada no Firestore — nenhuma imagem é salva em Base64 no banco. O Firebase Storage não foi utilizado porque a criação do bucket exige conta de cobrança (plano Blaze), fora do escopo deste trabalho; o enunciado admite outra solução de armazenamento. Se a foto não existir ou falhar ao carregar, a interface mostra um avatar padrão com a inicial do nome.
 
 ## Notificações push: configuração
 

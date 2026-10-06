@@ -11,8 +11,8 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
-import { firestore, storage } from './firebase';
+import { firestore } from './firebase';
+import { uploadImage } from './imageStorage';
 import { ChatGroup } from '../types/group';
 import { NotificationPolicy } from '../types/notification';
 import { parseGroupDoc } from '../utils/parseData';
@@ -149,13 +149,9 @@ export async function updateGroupFields(groupId: string, changes: GroupFieldChan
   });
 }
 
-// Foto do grupo: sobe no Storage e so a URL vai para o Firestore
+// Foto do grupo: sobe no imgbb e so a URL vai para o Firestore
 export async function uploadGroupPhoto(groupId: string, fileUri: string): Promise<string> {
-  const resposta = await fetch(fileUri);
-  const blob = await resposta.blob();
-  const imagemRef = storageRef(storage, `groups/${groupId}/foto.jpg`);
-  await uploadBytes(imagemRef, blob, { contentType: blob.type || 'image/jpeg' });
-  const url = await getDownloadURL(imagemRef);
+  const url = await uploadImage(fileUri, `grupo-${groupId}`);
   await updateDoc(doc(firestore, 'groups', groupId), { photoUrl: url, updatedAt: Date.now() });
   return url;
 }
