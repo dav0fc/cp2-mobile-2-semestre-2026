@@ -24,12 +24,25 @@ export function getAdminApp(): admin.app.App {
     );
   }
 
-  app = admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId,
-      clientEmail,
-      privateKey,
-    }),
-  });
+  try {
+    app = admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId,
+        clientEmail,
+        privateKey,
+      }),
+    });
+  } catch (erro) {
+    // Diagnostico sem vazar a chave: compara comprimento/forma com o esperado
+    const raw = rawKey.trim();
+    throw new Error(
+      `FIREBASE_PRIVATE_KEY nao parseia (${String(erro).slice(0, 80)}). ` +
+      `Diagnostico: comprimento=${raw.length} (esperado: 1731 para a chave atual), ` +
+      `comecaComBegin=${raw.startsWith('-----BEGIN')}, ` +
+      `terminaComEnd=${raw.endsWith('-----END PRIVATE KEY-----\\n') || raw.endsWith('-----END PRIVATE KEY-----')}, ` +
+      `quebrasDeLinhaReais=${rawKey.split('\n').length - 1}, ` +
+      `temLnLiteral=${rawKey.includes('\\n')}. Cole o valor em UMA linha direto do arquivo .json baixado.`
+    );
+  }
   return app;
 }
