@@ -251,14 +251,22 @@ Cada grupo tem `memberLimit` (definido na criação, editável pelo dono, nunca 
 
 ### Prints
 
-*(inserir os prints aqui antes de entregar)*
+![Login](screenshots/login.jpeg)
 
-- [ ] Login — `screenshots/login.png`
-- [ ] Cadastro — `screenshots/cadastro.png`
-- [ ] Lista de conversas — `screenshots/conversas.png`
-- [ ] Chat individual — `screenshots/chat-individual.png`
-- [ ] Chat de grupo — `screenshots/chat-grupo.png`
-- [ ] Criação de grupo — `screenshots/criar-grupo.png`
-- [ ] Integrantes do grupo — `screenshots/integrantes.png`
-- [ ] Perfil — `screenshots/perfil.png`
-- [ ] Notificação push recebida (evidência) — `screenshots/notificacao.png`
+![Cadastro](screenshots/cadastro.jpeg)
+
+![Lista de conversas](screenshots/conversas.jpeg)
+
+![Chat individual](screenshots/chat-individual.jpeg)
+
+![Chat de grupo](screenshots/chat-grupo.jpeg)
+
+![Criação de grupo](screenshots/criar-grupo.jpeg)
+
+![Integrantes do grupo](screenshots/integrantes.jpeg)
+
+![Perfil](screenshots/perfil.jpeg)
+
+**Notificação push recebida (evidência):**
+
+![Notificação push](screenshots/notificacao.jpeg)
