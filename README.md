@@ -251,22 +251,22 @@ Cada grupo tem `memberLimit` (definido na criação, editável pelo dono, nunca 
 
 ### Prints
 
-![Login](screenshots/login.jpeg)
+| **Login** | **Cadastro** |
+|:---:|:---:|
+| <img src="screenshots/login.jpeg" width="250" alt="Tela de login" /> | <img src="screenshots/cadastro.jpeg" width="250" alt="Tela de cadastro" /> |
 
-![Cadastro](screenshots/cadastro.jpeg)
+| **Lista de conversas** | **Chat individual** |
+|:---:|:---:|
+| <img src="screenshots/conversas.jpeg" width="250" alt="Lista de conversas" /> | <img src="screenshots/chat-individual.jpeg" width="250" alt="Chat individual" /> |
 
-![Lista de conversas](screenshots/conversas.jpeg)
+| **Chat de grupo** | **Criação de grupo** |
+|:---:|:---:|
+| <img src="screenshots/chat-grupo.jpeg" width="250" alt="Chat de grupo" /> | <img src="screenshots/criar-grupo.jpeg" width="250" alt="Criação de grupo" /> |
 
-![Chat individual](screenshots/chat-individual.jpeg)
-
-![Chat de grupo](screenshots/chat-grupo.jpeg)
-
-![Criação de grupo](screenshots/criar-grupo.jpeg)
-
-![Integrantes do grupo](screenshots/integrantes.jpeg)
-
-![Perfil](screenshots/perfil.jpeg)
+| **Integrantes do grupo** | **Perfil** |
+|:---:|:---:|
+| <img src="screenshots/integrantes.jpeg" width="250" alt="Integrantes do grupo" /> | <img src="screenshots/perfil.jpeg" width="250" alt="Tela de perfil" /> |
 
 **Notificação push recebida (evidência):**
 
-![Notificação push](screenshots/notificacao.jpeg)
+<img src="screenshots/notificacao.jpeg" width="250" alt="Notificação push recebida no aparelho" />
